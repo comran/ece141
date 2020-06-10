@@ -5,6 +5,7 @@
 \usepackage{graphicx}
 \usepackage{bm}
 \usepackage[margin=0.75in]{geometry}
+\usepackage{indentfirst}
 
 \newcommand*\diff{\mathop{}\!\mathrm{d}}
 \newcommand*\Diff[1]{\mathop{}\!\mathrm{d^#1}}
@@ -29,6 +30,7 @@ Based on the results of the simulation (shown below), it appears that an overwhe
 \newpage
 
 \subsection*{Nonlinear Laplace transforms}
+\noindent
 $sS(s) = -\beta_1 S I(s) - \beta_2 S J(s) + S(0)$ \\
 $sE(s) = \beta_1 S I(s) + \beta_2 S J(s) - \gamma E(s) + E(0)$ \\
 $sI(s) = \sigma_1 \gamma E(s) - \rho_1 I(s) + I(0)$ \\
@@ -253,6 +255,7 @@ Pick equilibrium values that are expected at the end of the pandemic.
 \end{equation*}
 
 \subsection*{Linear Laplace transforms}
+\noindent
 $sS(s) = -\beta_1 S_e I(s) - \beta_2 S_e J(s) + S(0)$ \\
 $sE(s) = \beta_1 S_e I(s) + \beta_2 S_e J(s) - (1-u_e) \gamma E(s) + E(0)$ \\
 $sI(s) = (1-u_e) \sigma_1 \gamma E(s) - \rho_1 I(s) + I(0)$ \\
@@ -276,7 +279,7 @@ $sD(s) = qJ(s) + D(0)$ \\
 \end{center}
 
 \subsection*{Issue with the linearized model}
-This linearized model would not be adequate for control since it assumes a constant value for $S_e$. In reality, this value is much higher at the beginning of the pandemic than at the end as the population becomes immune to the disease.
+This linearized model may not be adequate for control since it assumes a constant value for $S_e$. In reality, this value is much higher at the beginning of the pandemic than at the end as the population becomes immune to the disease. Therefore, the linearized model would deviate from the actual nonlinear model as more time passes by.
 
 \section*{Problem 4}
 \subsection*{Find a transfer function from J(0) $\rightarrow$ J}
@@ -336,24 +339,105 @@ Additionally, when setting $u_e = 0.9$, the transfer function has the following 
     \includegraphics[width=0.7\linewidth]{tf_root_locus_u_0_9}
 \end{center}
 
-There are three poles and two zeros in the transfer function, and \textbf{all of the zeros are on the real axis}. However, for $u_e = 0.9$, the poles are closer to zero. After testing with other values, it appears that \textbf{higher values for $u_e$ result in a shifting of the poles towards zero}. This would result in a quicker decay of the number of patients requiring critical treatment (classified by variable J) and, therefore, a lower strain on the hospital system. Since wearing masks would logically slow the spread of the disease, it makes intuitive sense that the stress on the hospital system would also decay faster.
-
-\newpage
-
-\subsection*{Simulink model comparing values of u}
-
-Comparing different values for u in my linear Simulink model supports the conclusion made for this transfer function. In addition, it is apparent that the system shows signs of underdamping for lower values of $u_e$. Although such a system reaches zero sooner, the initial overshoot has the potential to overload the hospital system with critically ill patients. By increasing u, the overshoot begins to disappear and, for the maximal possible value of $u_e = 0.9$, the system begins to resemble a more desirable critically-damped signal.
-
-\begin{center}
-    \includegraphics[width=\linewidth]{comparison_of_u_values_simulink}
-\end{center}
+There are three poles and two zeros in the transfer function, and \textbf{all of the poles/zeros are on the real axis}. In addition, \textbf{higher values of u result in poles that are closer to the imaginary axis}. This would result in a quicker decay of the number of patients requiring critical treatment (classified by variable J) and, therefore, a lower strain on the hospital system. Since wearing masks would logically slow the spread of the disease, it makes intuitive sense that the stress on the hospital system would also decay faster.
 
 \newpage
 
 \section*{Problem 5}
+Comparing different values for u in my linear Simulink model supports the conclusion made for this transfer function. In addition, it is apparent that the system shows signs of underdamping for lower values of $u_e$. Although such a system reaches zero sooner, the initial overshoot has the potential to overload the hospital system with critically ill patients. By increasing u, the overshoot begins to disappear and, for the maximal possible value of $u_e = 0.9$, the system begins to resemble a more desirable critically-damped signal.
+
+\begin{center}
+    \includegraphics[width=\linewidth]{J_simulink_u_values}
+\end{center}
+
+Additionally, the linear model indicates that higher values of u result in a slower decay in the number of susceptible individuals. Again, this makes intuitive sense since masks slow the spread of the disesase through a population.
+\begin{center}
+    \includegraphics[width=\linewidth]{S_simulink_u_values}
+\end{center}
+
+\newpage
+
+Varying the value for u on the nonlinear model shows similar results, with an overall decrease in the maximum overshoot of the signal for critically ill patients. However, the nonlinear model is also able to illustrate a bit of a "lag" for the peak value of J, which does result in the number of hospitalizations going above the initial value ($J(0)$) even for the maximum value of u as more patients become infected.
+
+\begin{center}
+    \includegraphics[width=\linewidth]{nonlinear_J_simulink_u_values}
+    \includegraphics[width=\linewidth]{nonlinear_S_simulink_u_values}
+\end{center}
+
+\subsection*{Reason for differences in the linear and nonlinear model}
+The linear model is based off of an equilibrium value for S at a specific timestep (in this case, the steady state value at the end of the nonlinear simulation). Therefore, the linear mode appears to have a lower value for the peak hospitalization rates in J. However, given the chosen value for $S_e$, the general shape of the linear and nonlinear models for J are closely related by a constant scalar multiple.
+
+The linear model is also not able to express some of the nuances of the linear model, such as the initial dip in the value for J due to the dependence of E on a dynamic value for S (rather than an equilibrium value). These differences require higher-order degrees of the Taylor series for the nonlinear model to be expressed in a simplified model, so the linearized model effectively disregards them.
+
+\newpage
 
 \section*{Problem 6}
+As seen in previous parts, higher values of u result in a more critically damped response in terms of the number of hospitalizations. Therefore, there is less overshoot that can quickly result in an overload of the hospital system. 
+
+\subsection*{Controller design}
+With this insight, I designed a controller for the outbreak consisting of distinct mask policies at three timesteps: a strict policy at the beginning of the outbreak, a relaxed policy after the initial spike, and elimination of masks soon after the relaxed policy.
+
+\begin{center}
+    \includegraphics[width=0.5\linewidth]{simulink_mask_policy}
+\end{center}
+
+Enforcement of the strict mask policy is critical during early stages of the pandemic beyond \textbf{t=0} since a lower value for u would result in a much higher overshoot in the number of hospitalizations, which is only amplified by the high number of susceptible individuals. However, by \textbf{t=80}, the number of susceptible individuals has decreased to the point where a higher overshoot in hospitalizations is acceptable, and a more relaxed mask policy can be implemented. This relaxed policy also accelerates the decrease of the number of susceptible individuals to the point where the mask policy can be completely eliminated by \textbf{t=90}. 
+
+\subsection*{Simulation results}
+Using this controller as an input to the nonlinear model results in a manageable number of hospitalizations throughout the outbreak, with the maximum value for J never exceeding $1\%$.
+
+\begin{center}
+    \includegraphics[width=0.8\linewidth]{controlled_outbreak_J_simulink}
+\end{center}
+
+\newpage
+
+According to the simulation, this controller for u does not change the number of people who ultimately end up recovering or dying in the outbreak. However, in practice, keeping the number of people who are hospitalized at any given time below $1\%$ is critical to actually seeing the values predicted by this model, and any overload of the hospital system (as shown by my initial model of the outbreak with no mask policy at all) would ultimately result in significantly more deaths as sick individuals are denied treatment due to lack of resources.
+
+
+\begin{center}
+    \includegraphics[width=0.8\linewidth]{controlled_outbreak_simulink}
+\end{center}
+
+\subsection*{Complete Simulink diagram using the nonlinear model}
+\begin{center}
+    \includegraphics[width=0.7\linewidth]{controlled_simulink}
+\end{center}
 
 \section*{Problem 7}
+\subsection*{Analysis}
+The critical initial conditions for controlling the number of hospitalizations are S, E, I, and J. To analyze the effect of modifying these initial conditions, I used the same controller designed in the previous part to analyze the change in maximum hospitalizations during the outbreak.
 
+Lowering the value of S without disturbing E, I, and J can be accomplished by moving the population to the R and D groups. As far as tuning u, it does not matter whether the population moved all to R or all to D since these terms do not affect the tuning of u. However, a decrease in S ultimately results in a lower maximum value of J since there is already a lower susceptible population that can end up in the hospitalization group. As shown in the following plot where S was decreased by $20\%$, a more relaxed mask policy can be used in this case since there is room for extra overshoot in the model.
+
+\begin{center}
+    \includegraphics[width=0.7\linewidth]{init_conditions_lower_s}
+\end{center}
+
+In contrast, moving $20\%$ of the population from S to E results in a much higher peak value for J since there is a higher initial likelihood of individuals becoming hospitalized since they are already infected with the virus. As shown in the following plot, this situation would require a higher value of u (resulting in a more damped response for J), which can slow the initial hospitalization rate at the beginning of the outbreak to prevent an overload.
+
+\begin{center}
+    \includegraphics[width=0.7\linewidth]{init_conditions_higher_e}
+\end{center}
+
+\newpage
+
+Moving $20\%$ of the population from S to I (representing a higher initial number of infections) results in a bigger initial spike in hospitalizations since infected individuals are quicker to transition into the J group. Therefore, a higher value of u is required to reduce the initial overshoot.
+
+\begin{center}
+    \includegraphics[width=0.7\linewidth]{init_conditions_higher_i} 
+\end{center}
+
+Raising the initial value of J to $1\%$ (by subtracting $1\%$ of the population from the S group) did not result in an overload of the hospital system. As shown in the next plot, although the value of J initially starts at the maximum, it decreases since there is not yet a significant percentage of exposed individuals (E) in the population.
+
+\begin{center}
+    \includegraphics[width=0.7\linewidth]{init_conditions_high_j} 
+\end{center}
+
+\newpage
+
+\subsection*{Results}
+For different S, E, and I initial conditions, the model will need to be adjusted to control the initial overshoot conditions. In general, it appears that higher percentages in these groups require a stricter mask policy (higher value of u) and vice versa. Additionally, moving a percentage of the population from S, E, I, and J to either R or D will allow for a lower value for u since recovered and dead individuals can no longer be hospitalized due to the virus in this model.
+
+Like before, the effect of raising u results in a more damped response of the number of hospitalizations that ultimately reduces overshoot and a lower peak hospitalization percentage. Therefore, initially raising u to the highest possible value (u=0.9) and reducing it at t=100 after most individuals have either recovered or died would work for the majority of initial conditions.
 \end{document}
